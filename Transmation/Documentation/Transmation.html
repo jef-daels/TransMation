@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>TransMation documentation</title>
+  <!-- Required meta tags -->
+  <meta charset="utf-8" />
+  <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  <!-- Bootstrap CSS v5.2.1 -->
+  <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+  />
+  <style>
+    .liheader {font-weight: bold;}
+    </style>
+</head>
+<body>
+<h1>TransMation</h1>
+<h2>Abstract</h2>
+<p class=""><em>TransMation</em> (short for <em><b>Trans</b>form ani<b>Mation</b></em>), aims to animate transforms in Unity. These
+animations are technical in nature: a movement, rotation, scaling and so forth.  By no means is it intended to replace the artistic animations
+found in 3D models which serve the purpose of animating the object itself, rather than its Transform.
+</p>
+<p>
+Inspiration for this animation framework was found in the WPF framework.
+</p>
+
+<h2>TransMation introduction</h2>
+<p>
+In the approach we take, an animation is a process which <em>generates values</em>.  These values range from a starting <b>From</b> value to a 
+final <b>To</b> value in a specified timespan <b>Duration</b> according to some (not necessarly linear) lerping function.  The calculated values are assigned to properties
+of a visual object, resulting in some visual changes: the desired animation.
+</p>
+<p>
+The datatype of the value is irrelevant for the concept: it can be a float, a Vector3, a Color, .. .  Because of this, TransMation will be developped as a generic type.
+Applying such TransMation to a transform easily results in:
+</p>
+<p>
+<ul>
+    <li>Movement animation: changing the Vector3 position of a GameObject</li>
+    <li>Rotating an GameObject: using an animated Quaternion to rotate</li>
+    <li>Rotating an GameObject: using an animated float to rotate through Euler angles</li>
+    <li>Changing the color of an GameObject: animating a Color- value for it's material</li>
+    <li>Scaling an GameObject: using an animated Vector3 to change the scale</li>
+</ul>
+The package comes with a generic sinual Lerp function, which eases at both the start and the end. To be able to implement this function 
+for a specific Type, one must provide the Linear Lerp function for this type. The package takes it from there.
+<br>
+<br>
+For demonstration purposes, the package also contains the non trivial spiral and gravity animations. 
+</p>
+<p>
+As the examples above demonstrate, these animations are concerned more about technical than artistic changes to an object.
+</p>
+<h2>Default TransMation features</h2>
+The TransMation package was developped as an opportunity to demonstrate some technicalities and patterns:
+<ul>
+  <li>event based notifications from the animation to it's subscribers</li>
+  <li>statepattern to distinguish the different states the transmation is in</li>
+  <li>builder pattern to construct an animation</li>
+  <li>generics so that one generic TransMation class supports animating different datatypes</li>
+</ul>
+
+<h3>Transmation constructor</h3>
+The constructor of the default TransMation expects only one argument: the Lerp function for the specific datatype. The 
+example a bit below illustrates how this should be called.
+
+<h3>Transmation builder pattern</h3>
+The builder pattern variation I went for: call a Set- method on the transmation which returns the transmation itself, allowing 
+for the fluent syntax to be used. When the same setter is used multiple times, the latter one overwrites the former one.  Available Setters are:
+
+<ul>
+  <li><span class="liheader">SetDelay(float)</span>: see <a href="#Delay">Delay</a>.</li>
+  <li><span class="liheader">SetDuration(float)</span>: see <a href="#Duration">Duration</a></li>
+  <li><span class="liheader">SetFrom(T)</span>: see <a href="#From">From</a>.</li>
+  <li><span class="liheader">SetMaxIterations(int)</span>: each time the animation completes the [From,To] range, an interation ends. 
+    MaxIterations allows to execute multiple (identical)    iterations. Every iteration contains both the delay and duration.
+  </li>
+  <li><span class="liheader">SetReverseOrder(TransMationReverseMode)</span>: see <a href="#ReverseMode">ReverseMode</a></li>
+  <li><span class="liheader">SetTo(T)</span>: see <a href="#To">To</a>.</li>
+</ul>  
+
+<h3>Public TransMation properties</h3>  
+<ul>
+  <li id="CurrentIteration"><span class="liheader">int CurrentIteration{get;}</span>: the sequence number of the currently executed iteration</li>
+  <li id="CurrentProgress"><span class="liheader">float CurrentProgress{get;}</span>: the proportional progress (in the range [0,1]) in the duration of an iteration of the TransMation. 
+    This progress is linear: if x% of the animation duration passed, CurrentProgress is x/100</li>
+  <li id="CurrentValue"><span class="liheader">T CurrentValue{get;}</span>: the lerped value T, caluclated by feeding the CurrentProgress into the provided Lerp function.</li>
+  <li id="Delay"><span class="liheader">float Delay{get;}</span>: the time (in seconds) it takes before values are generated (part of the iteration, not part of the Duration)</li>
+  <li id="Duration"><span class="liheader">float Duration{get;}</span>: how long does it take to generate the values in the [From,To] range. This does not include the Delay and sometimes 
+    not the time it takes for Reverse the animation (if required, see <a href="#ReverseMode">ReverseMode</a>). This Duration is NOT
+    the total iteration time. For the total iteration time, see <a href="#TransMationDuration">TransMationDuration</a>
+  </li>
+  <li id="From"><span class="liheader">T From{get;}</span>: the starting value when generating values</li>
+  <li id="HasDelayEnded"><span class="liheader">bool HasDelayEnded{get;}</span>: true if, for the current iteration, the <a href="#Delay">Delay</a> has ended, false otherwise</li>
+  <li id="IsFinished"><span class="liheader">bool IsFinished{get;}</span>: true if all iterations have finished, false otherwise.</li>
+  <li id="IsStarted"><span class="liheader">bool IsStarted{get;}</span>: true if the first iteration started (even when still in the Delay), false otherwise.</li>
+  <li id="IsTransforming"><span class="liheader">bool IsTransforming{get;}</span>: true if IsStarted and not IsFinished, false otherwise.</li>
+  <li id="LerpFunction"><span class="liheader">Func&lt;T, T, float, T&gt; LerpFunction{get;}</span>: LerpFunction used to generate lerped values between From and To
+    based on Progress. This LerpFunction does not have to be a linear one.  The package comes with a generic sinus Lerp function</li>
+  <li id="MaxIterations"><span class="liheader">int MaxIterations{get;}</span>: the number of iterations which will be performed. Defaults to 1</li>
+  <li id="PausedDuration"><span class="liheader">float PausedDuration{get;}</span>: how long has the TransMation been paused (in seconds). 
+    We (internally) add to the PauzedDuration by executing the AddPauzeDuration. PausedDuration is only updated when the pause ends!</li>
+  <li id="ReverseMode"><span class="liheader">TransMationReverseMode ReverseMode{get;}</span>: specifies the reverse behavior of each iteration:
+    <ul>
+      <li>TransMationReverseMode.None: no reverse logic is applied</li>
+      <li>TransMationReverseMode.ReverseOnly: the animation runs backwards.  If the Lerp-function is not symmetric, this is different 
+        from switching From and To</li>
+      <li>TransMationReverseMode.DuringDuration: the animation goes back and forth within the specified Duration</li>
+      <li>TransMationReverseMode.DoubleDuration: the animation goes back and forth, each one lasting the Duration, 
+        so effectively doubling the Duration of an iteration.</li>
+    </ul>
+  </li>
+  <li id="StartTime"><span class="liheader">float StartTime{get;}</span>: time at which the animation was started. 
+    This StartTime is used to calculate <a href="#CurrentProgress">CurrentProgress</a> (described above).</li>
+  <li id="State"><span class="liheader">TransMationState<T> State</span>: the current state of the animation. The different states describe 
+  possible actions for this specific state (eg: the finished state performs no logic if you want to pause it)</li>
+  <li id="To"><span class="liheader">T To{get;}</span>: the end value when generating values</li>
+  <li id="TransMationDuration"><span class="liheader">float TransMationDuration{get;}</span>: 
+    calculates the total duration of this iteration. The result is Duration or 2*Duration, depending on the ReverseMode.</li>
+    <li id="TransMationDurationExceeded"><span class="liheader">bool TransMationDurationExceeded{get;}</span>: 
+      True if the total execution time of the iteration exceeds the total time the TransMation should run. 
+      This takes into account PauseDuration, ReverseMode and Duration</li>
+</ul>
+
+<h3>Public TransMation events</h3>
+<ul>
+  <li id="DelayEnded"><span class="liheader">public event EventHandler DelayEnded;</span>: 
+    called every time the delay of an iteration ends. Not called if the DelayTime is 0 (debatable).</li>
+  <li id="IterationEnded"><span class="liheader">public event EventHandler IterationEnded;</span>: 
+    called every time an iteration ends.</li>
+  <li id="IterationStarted"><span class="liheader">public event EventHandler IterationStarted;</span>: 
+    called every time an iteration starts.</li>
+  <li id="Progressed"><span class="liheader">public event EventHandler Progressed;</span>: 
+    called every time the TransMation progressed to a new value. The new value is calculated using the CurrentProgress
+    and the provided LerpFunction.</li>
+</ul>
+
+<h3>Public TransMation methods</h3>
+<ul>
+  <li id="Animate"><span class="liheader">public IEnumerator Animate()</span>: expected to be called from within StartCoroutine, which starts the TransMation</li>
+  <li id="Reset"><span class="liheader">public void Reset()</span>: resets the TransMation to the TransMationCreated state and resets all
+   values which need to be reset so the TransMation can be started afresh.</li>
+   <li id="TogglePause"><span class="liheader">public IEnumerator TogglePause()</span>: if the TransMation is in the
+    TransMationPauseState state, it resumes in the previous state. If the program was not paused, depending on the current state the game might
+     move to the TransMationPausedState state or not. Eg, the TransMationFinishedState does NOT move to the TransMationPausedState state,
+    but TransMationRunningState state does.</li>
+</ul>
+
+<h3>Public TransMation constructors</h3>
+<ul>
+  <li id="TransMation"><span class="liheader">public TransMation(Func&lt;T, T, float, T&gt; LerpFunction)</span>: 
+    when the constructor is called, a 'Lerp' function for the generic type T must be provided (see example below).
+    Actually, Lerp means 'linear', but a non linear transformation for this generic type T might be provided as well.
+    The TransMation package provides a generic sinus (easing) interpolation based on the linear one (see the examples below).
+  </li>
+</ul>
+<p>
+
+
+<h2>TransMation examples</h2>  
+<h3>TransMation&lt;Vector3&gt; to change a position</h3>
+Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);<br>
+Vector3 toPosition = ray.GetPoint(10);<br>
+<br>
+_moveTransMation = new TransMation&lt;Vector3&gt;( <br>
+    TransMation&lt;Vector3&gt;.TechAnimationUtilities.SinLerpFunction(Vector3.Lerp)<br>
+    )<br>
+    .SetFrom(transform.position) <br>
+    .SetTo(toPosition) <br>
+    .SetDuration(_duration) <br>
+    .SetDelay(0) <br>
+    .SetReverseMode(_reverseMode) <br>
+    .SetMaxIterations(3);  <br> 
+<br>
+_moveTransMation.Progressed += (s, e) => transform.position = _moveTransMation.CurrentValue;<br>
+StartCoroutine(_moveTransMation.Animate());  //start the TransMation<br> 
+
+<h3>TransMation&lt;Color&gt; to change a color</h3>
+Color toColor = new Color(1, 0, 0, 0); <br> 
+Color fromColor = _renderer.material.color; <br>
+if (toColor == fromColor) <br>
+{ <br>
+    toColor = _initColor; <br>
+} <br>
+_colorTransMation = new TransMation&lt;Color&gt; <br>
+    (TransMation&lt;Color&gt;.TechAnimationUtilities.SinLerpFunction(Color.Lerp)  <br>
+    ) <br>
+    .SetFrom(fromColor) <br>
+    .SetTo(toColor) <br>
+    .SetDuration(_duration) <br>
+    .SetReverseMode(_reverseMode) <br>
+    .SetMaxIterations(3); <br>
+<br>
+_colorTransMation.Progressed += (s, e) => _renderer.material.color = _colorTransMation.CurrentValue;  <br>
+StartCoroutine(_colorTransMation.Animate());  <br>
+
+<h3>TransMation&lt;float&gt; to change a rotation</h3>
+float fromEulerY = transform.eulerAngles.y; <br>
+float toEulerY = fromEulerY + 360;<br>
+_rotateEulerYTransMation = new TransMation&lt;float&gt;(TransMation&lt;float&gt;.TechAnimationUtilities.SinLerpFunction(Mathf.Lerp)<br>
+    )<br>
+    .SetFrom(fromEulerY)<br>
+    .SetTo(toEulerY)<br>
+    .SetDuration(_duration)<br>
+    .SetReverseMode(_reverseMode)<br>
+    .SetMaxIterations(3);<br>
+    <br>
+_rotateEulerYTransMation.Progressed += (s, e) => transform.eulerAngles = new Vector3(0, _rotateEulerYTransMation.CurrentValue, 0);<br>
+StartCoroutine(_rotateEulerYTransMation.Animate());<br>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<h3>Final remarks</h3>
+Finally, it's worth noting that the TransAnimation can be inherited from to implement more specific TransMations.
+The package contains SpiralTransMation and GravityTransMation examples.
+</body>
+</html>
