@@ -36,7 +36,7 @@ public class GravityTest : MonoBehaviour
         Vector3 fromPosition = transform.position;
         _gravityAnimation = 
             new GravityHeightTransMation(fromPosition.y, fromPosition.y, _duration, 0.0f
-            , null
+            , transform.up * 10
             //, () => transform.position = new Vector3(fromPosition.x, _gravityAnimation.CurrentValue, fromPosition.z)
             );
 
