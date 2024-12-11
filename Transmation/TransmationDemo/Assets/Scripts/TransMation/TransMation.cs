@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace TransMation
 {
-    public class ProgressEventArgs<T>: EventArgs
+    public class ProgressEventArgs<T> : EventArgs
     {
         public T CurrentValue { get; private set; }
         public ProgressEventArgs(T currentValue)
@@ -50,7 +50,7 @@ namespace TransMation
         public bool IsFinished { get => State.State == TransMationStates.Ended; }
         public bool IsTranforming { get { return IsStarted && !IsFinished; } }
 
-        public float StartTime { get; private set; }
+        //public float StartTime { get; private set; }
 
         private T currentValue;
 
@@ -71,6 +71,7 @@ namespace TransMation
             }
         }
 
+        public float CurrentProgressTime { get; private set; }
         private float _currentProgress = 0;
         public float CurrentProgress
         {
@@ -168,8 +169,10 @@ namespace TransMation
         {
             get
             {
-                return Time.realtimeSinceStartup - StartTime - Delay
-                    >= TransMationDuration + PausedDuration;
+                //return Time.realtimeSinceStartup - StartTime - Delay
+                //return Time.time - StartTime - Delay
+                //    >= TransMationDuration + PausedDuration;
+                return CurrentProgressTime - Delay - PausedDuration >= TransMationDuration;
             }
         }
 
@@ -177,7 +180,9 @@ namespace TransMation
         {
             get
             {
-                return Time.realtimeSinceStartup >= StartTime + Delay + PausedDuration;
+                //return Time.realtimeSinceStartup >= StartTime + Delay + PausedDuration;
+                //return Time.time >= StartTime + Delay + PausedDuration;
+                return CurrentProgressTime >= Delay + PausedDuration;
             }
         }
 
@@ -197,9 +202,12 @@ namespace TransMation
 
         internal void Progress()
         {
-            float currentTime = Time.realtimeSinceStartup;
+            //float currentTime = Time.realtimeSinceStartup;
+            //float currentTime = Time.time;
+            CurrentProgressTime += Time.deltaTime;  //scaled!
+
             //progress should be a value in the range [0,1]
-            float progress = (currentTime - Delay - StartTime - PausedDuration)
+            float progress = (CurrentProgressTime - Delay - PausedDuration)
                 / TransMationDuration;
             if (ReverseMode == TransMationReverseMode.DoubleDuration || ReverseMode == TransMationReverseMode.DuringDuration)
             {
@@ -223,7 +231,9 @@ namespace TransMation
 
         internal virtual void StartIteration()
         {
-            StartTime = Time.realtimeSinceStartup;
+            //StartTime = Time.realtimeSinceStartup;
+            //StartTime = Time.time;
+            CurrentProgressTime = 0;
             PausedDuration = 0;
             //OnStart?.Invoke();
             OnIterationStarted();
@@ -232,6 +242,7 @@ namespace TransMation
         }
         internal virtual void EndIteration()
         {
+            OnProgressed(currentValue);
             OnIterationEnded();
         }
 
@@ -240,6 +251,7 @@ namespace TransMation
             CurrentIteration = 0;
             State = new TransMationCreatedState<T>(this);
             PausedDuration = 0;
+            CurrentProgressTime = 0;
         }
 
         #region pause
@@ -249,7 +261,7 @@ namespace TransMation
         }
 
         public float PausedDuration { get; protected set; }
-        internal void AddPauseDuration(float duration)
+        internal void AddPausedDuration(float duration)
         {
             PausedDuration += duration;
         }
@@ -265,7 +277,7 @@ namespace TransMation
                 //we will use this to calculate a general sin function result [0,1]: sinProgress
                 //this sinProgress wil also be in the range [0,1]
                 //use sinProgress with the linear Lerpfunction<T> to calculate a progress value 
-                
+
                 //Concerning this sin function: r*sin(pulsation*progress*phase)+intercept
 
                 //r = 1/2, since the sin-function ranges distance 2 (-1=> 1) and we want 1

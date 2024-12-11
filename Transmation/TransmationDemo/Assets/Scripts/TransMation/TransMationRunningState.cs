@@ -24,17 +24,18 @@ namespace TransMation
                 TransMation.CurrentValue =
                     (TransMation.ReverseMode == TransMationReverseMode.None)
                     ? TransMation.To : TransMation.From;
+                TransMation.EndIteration();
+
 
                 if (TransMation.CurrentIteration >= TransMation.MaxIterations
                     && TransMation.MaxIterations > 0)
                 {
-                    TransMation.EndIteration();
+                    //total animation ended
                     return new TransMationEndedState<T>(TransMation);
                 }
                 else //add one more iteration
                 {
                     //needs to Start to reset the state
-                    TransMation.EndIteration();
                     TransMation.StartIteration();
                     return new TransMationInDelayState<T>(TransMation);
                 }
